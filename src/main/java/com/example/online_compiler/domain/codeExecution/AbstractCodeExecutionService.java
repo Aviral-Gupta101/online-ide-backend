@@ -1,8 +1,6 @@
 package com.example.online_compiler.domain.codeExecution;
 
 import com.example.online_compiler.entity.CompileAndRunResult;
-import com.example.online_compiler.util.enums.BuildAndRunCmdEnum;
-import com.example.online_compiler.util.enums.CodeExecutionTypeEnum;
 import com.github.dockerjava.api.DockerClient;
 import com.github.dockerjava.api.async.ResultCallback;
 import com.github.dockerjava.api.command.CreateContainerResponse;
@@ -10,13 +8,15 @@ import com.github.dockerjava.api.command.ExecCreateCmdResponse;
 import com.github.dockerjava.api.command.InspectContainerResponse;
 import com.github.dockerjava.api.model.Frame;
 import com.github.dockerjava.api.model.HostConfig;
+import lombok.Getter;
 import lombok.NonNull;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import java.io.ByteArrayOutputStream;
+import java.util.Arrays;
 import java.util.UUID;
-
+import java.util.concurrent.TimeUnit;
 
 @Slf4j
 public abstract class AbstractCodeExecutionService {
@@ -24,37 +24,59 @@ public abstract class AbstractCodeExecutionService {
     @Autowired
     public DockerClient dockerClient;
 
-    private final CodeExecutionTypeEnum codeExecutionType;
+    private String containerId;
 
-    @NonNull
+    private final String containerImage;
+
+    @Setter
+    @Getter
+    private String code;
+
+    @Getter
+    private String baseFileName;
+
+    @Setter
+    private String fileExtension;
+
+    @Getter
+    private String[] compileAndRunCmd;
+
+    @Setter
+    private int timeout = 10; // default to 5 seconds;
+
+    @Getter
+    @Setter
+    private int codeExecutionTimeout = 10; // 15 seconds
+
     @Setter
     private HostConfig hostConfig;
 
-    @NonNull
-    @Setter
-    private String code;
 
-    private String fileNameWithExtension;
-    private String containerId;
+    public AbstractCodeExecutionService(@NonNull String containerImage) {
 
-    String[] command;
+        if (containerImage.isBlank())
+            throw new IllegalArgumentException("containerImage can't be blank");
 
-    public AbstractCodeExecutionService(CodeExecutionTypeEnum codeExecutionType) {
-
-        this.codeExecutionType = codeExecutionType;
+        this.containerImage = containerImage;
         this.hostConfig = new HostConfig();
 
-        generatedFileNameWithExtension();
-        generateCompileAndRunCommand();
+        generateBaseFileName();
     }
 
-    /**
-     * Creates a container of image specified in codeExecutionTypeEnum, with default host configuration
-     * 1 CPU Core, 512 MB RAM and 512 MB SWAP
-     */
+    public void setCompileAndRunCmd(String[] compileAndRunCmd) {
+
+        String[] updatedCompileAndRunCmd = Arrays.copyOf(compileAndRunCmd, compileAndRunCmd.length);
+
+        for (int i = 0; i < updatedCompileAndRunCmd.length; i++) {
+            updatedCompileAndRunCmd[i] = updatedCompileAndRunCmd[i].replaceAll("<file_name>", baseFileName);
+        }
+
+        this.compileAndRunCmd = updatedCompileAndRunCmd;
+    }
+
     private void startContainer() {
 
-        CreateContainerResponse createContainerResponse = dockerClient.createContainerCmd(codeExecutionType.getImage())
+        CreateContainerResponse createContainerResponse = dockerClient.createContainerCmd(containerImage)
                 .withHostConfig(hostConfig)
                 .withTty(true)
                 .exec();
@@ -63,33 +85,10 @@ public abstract class AbstractCodeExecutionService {
         this.containerId = createContainerResponse.getId();
     }
 
-    private void generatedFileNameWithExtension() {
-
-        if (codeExecutionType == CodeExecutionTypeEnum.CPP)
-            this.fileNameWithExtension = UUID.randomUUID().toString().substring(0, 8) + ".cpp";
-
-        else
-            throw new RuntimeException("Error: CodeExecutionTypeEnum is not defined for generating filenames");
+    private void generateBaseFileName() {
+        this.baseFileName = UUID.randomUUID().toString().substring(0, 8);
     }
 
-    private void generateCompileAndRunCommand() {
-
-        if (codeExecutionType == CodeExecutionTypeEnum.CPP) {
-            command = BuildAndRunCmdEnum.CPP.getCmd(fileNameWithExtension.split("\\.")[0]);
-        }
-
-        else
-            throw new RuntimeException("Error: CodeExecutionTypeEnum is not defined for generating command");
-
-
-    }
-
-    /**
-     * @param pollingInterval Time interval to check status of container in seconds
-     * @param timeout         Max duration to wait in seconds
-     * @return Boolean value true if container is running else false
-     * @throws InterruptedException Throws interruptedException if thread is interrupted
-     */
     private boolean isContainerRunning(int pollingInterval, int timeout) throws InterruptedException {
 
         InspectContainerResponse.ContainerState state = dockerClient.inspectContainerCmd(containerId).exec().getState();
@@ -120,15 +119,15 @@ public abstract class AbstractCodeExecutionService {
         return true;
     }
 
-    protected void sendCodeToContainer() throws InterruptedException {
+    private void sendCodeToContainer() throws InterruptedException {
 
-        boolean containerRunning = isContainerRunning(5, 15);
+        if (fileExtension == null || fileExtension.isEmpty())
+            throw new IllegalArgumentException("fileExtension can't be blank");
 
-        if (!containerRunning) {
-            throw new RuntimeException("ERROR: Unable to send code because Container is not running");
-        }
+        if (code == null || code.isEmpty())
+            throw new IllegalArgumentException("code can't be blank");
 
-        String[] command = new String[]{"sh", "-c", "echo \"" + code + "\" > /" + fileNameWithExtension};
+        String[] command = new String[]{"sh", "-c", "echo \"" + code + "\" > /" + baseFileName + "." + fileExtension};
 
         ExecCreateCmdResponse execResponse = dockerClient.execCreateCmd(containerId)
                 .withAttachStdout(true)
@@ -141,21 +140,15 @@ public abstract class AbstractCodeExecutionService {
 
     private CompileAndRunResult compileAndRun() throws InterruptedException {
 
-        boolean containerRunning = isContainerRunning(2, 5);
-
-        if (!containerRunning) {
-            throw new RuntimeException("ERROR: Unable to compile and run because Container is not running");
-        }
-
         ExecCreateCmdResponse execResponse = dockerClient.execCreateCmd(containerId)
                 .withAttachStdout(true)
                 .withAttachStderr(true)
-                .withCmd(command)
+                .withCmd(compileAndRunCmd)
                 .exec();
 
         ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
 
-        dockerClient.execStartCmd(execResponse.getId())
+        boolean result = dockerClient.execStartCmd(execResponse.getId())
                 .exec(new ResultCallback.Adapter<Frame>() {
                     @Override
                     public void onNext(Frame frame) {
@@ -165,7 +158,11 @@ public abstract class AbstractCodeExecutionService {
                             System.out.println("ERROR: " + e.getMessage());
                         }
                     }
-                }).awaitCompletion();
+                    // +2 seconds for extra overhead of starting the container etc.
+                }).awaitCompletion(codeExecutionTimeout + 2, TimeUnit.SECONDS);
+
+        if (!result)
+            return new CompileAndRunResult(-1L, "TIME LIMIT EXCEEDED");
 
         String output = outputStream.toString();
         Long exitCodeLong = dockerClient.inspectExecCmd(execResponse.getId()).exec().getExitCodeLong();
@@ -186,19 +183,30 @@ public abstract class AbstractCodeExecutionService {
 
     protected CompileAndRunResult runAllTask() throws InterruptedException {
 
-        if (code.isBlank()) {
-            throw new RuntimeException("ERROR: Code is blank");
+        try {
+
+            startContainer();
+
+            boolean containerRunning = isContainerRunning(3, timeout);
+
+            if (!containerRunning) {
+                throw new RuntimeException("ERROR: Container is not running");
+            }
+
+            sendCodeToContainer();
+            return compileAndRun();
+
+        } catch (Exception e) {
+
+            log.error("ERROR: Unable to execute runAllTask{}", e.getMessage());
+            throw new RuntimeException(e);
+
+        } finally {
+            removeContainer();
         }
-
-        startContainer();
-        sendCodeToContainer();
-        var result = compileAndRun();
-        removeContainer();
-
-        return result;
 
     }
 
-    public abstract void execute() throws InterruptedException;
+    public abstract CompileAndRunResult execute() throws InterruptedException;
 
 }
