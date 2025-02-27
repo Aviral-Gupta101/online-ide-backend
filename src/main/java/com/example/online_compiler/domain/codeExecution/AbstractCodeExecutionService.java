@@ -30,7 +30,10 @@ public abstract class AbstractCodeExecutionService {
 
     @Setter
     @Getter
-    private String code;
+    private String code; // in base64 format;
+
+    @Setter
+    private String input = "";
 
     @Getter
     private String baseFileName;
@@ -50,7 +53,6 @@ public abstract class AbstractCodeExecutionService {
 
     @Setter
     private HostConfig hostConfig;
-
 
     public AbstractCodeExecutionService(@NonNull String containerImage) {
 
@@ -127,7 +129,11 @@ public abstract class AbstractCodeExecutionService {
         if (code == null || code.isEmpty())
             throw new IllegalArgumentException("code can't be blank");
 
-        String[] command = new String[]{"sh", "-c", "echo \"" + code + "\" > /" + baseFileName + "." + fileExtension};
+        String[] command = new String[]{
+                "sh", "-c",
+                "echo " + code + " | base64 -d > /" + baseFileName + "." + fileExtension
+                        + " && echo " + input + " > /input.txt"
+        };
 
         ExecCreateCmdResponse execResponse = dockerClient.execCreateCmd(containerId)
                 .withAttachStdout(true)
@@ -208,5 +214,4 @@ public abstract class AbstractCodeExecutionService {
     }
 
     public abstract CompileAndRunResult execute() throws InterruptedException;
-
 }
