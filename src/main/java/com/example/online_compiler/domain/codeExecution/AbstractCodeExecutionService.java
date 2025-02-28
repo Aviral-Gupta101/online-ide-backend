@@ -15,7 +15,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import java.io.ByteArrayOutputStream;
 import java.util.Arrays;
-import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
 @Slf4j
@@ -36,7 +36,7 @@ public abstract class AbstractCodeExecutionService {
     private String input = "";
 
     @Getter
-    private String baseFileName;
+    private String baseFileName; // Default to Main else change method generateBaseFileName()
 
     @Setter
     private String fileExtension;
@@ -88,7 +88,8 @@ public abstract class AbstractCodeExecutionService {
     }
 
     private void generateBaseFileName() {
-        this.baseFileName = UUID.randomUUID().toString().substring(0, 8);
+//        this.baseFileName = UUID.randomUUID().toString().substring(0, 8);
+        this.baseFileName = "Main";
     }
 
     private boolean isContainerRunning(int pollingInterval, int timeout) throws InterruptedException {
@@ -132,7 +133,7 @@ public abstract class AbstractCodeExecutionService {
         String[] command = new String[]{
                 "sh", "-c",
                 "echo " + code + " | base64 -d > /" + baseFileName + "." + fileExtension
-                        + " && echo " + input + " > /input.txt"
+                        + " && echo \"" + input + "\" > /input.txt"
         };
 
         ExecCreateCmdResponse execResponse = dockerClient.execCreateCmd(containerId)
@@ -177,13 +178,17 @@ public abstract class AbstractCodeExecutionService {
     }
 
     private void removeContainer() {
-        try {
-            dockerClient.stopContainerCmd(containerId).exec();
-            dockerClient.removeContainerCmd(containerId).exec();
-            Thread.sleep(500);
-        } catch (InterruptedException e) {
-            System.out.println("ERROR: " + e.getMessage());
-        }
+        CompletableFuture.runAsync(() -> {
+            try {
+                dockerClient.stopContainerCmd(containerId).exec();
+                dockerClient.removeContainerCmd(containerId).exec();
+                Thread.sleep(500);
+            } catch (InterruptedException e) {
+                System.out.println("ERROR: " + e.getMessage());
+                Thread.currentThread().interrupt(); // Restore interrupt flag
+            }
+        });
+
 
     }
 
