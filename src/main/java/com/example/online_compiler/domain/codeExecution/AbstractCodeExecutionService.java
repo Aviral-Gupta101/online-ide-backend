@@ -192,7 +192,7 @@ public abstract class AbstractCodeExecutionService {
 
     }
 
-    protected CompileAndRunResult runAllTask() throws InterruptedException {
+    protected CompileAndRunResult execute() throws InterruptedException {
 
         try {
 
@@ -218,5 +218,5 @@ public abstract class AbstractCodeExecutionService {
 
     }
 
-    public abstract CompileAndRunResult execute() throws InterruptedException;
+    public abstract CompileAndRunResult setup() throws InterruptedException;
 }

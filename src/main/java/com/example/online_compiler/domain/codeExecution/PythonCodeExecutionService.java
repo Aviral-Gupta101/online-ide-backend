@@ -6,21 +6,22 @@ import org.springframework.web.context.annotation.RequestScope;
 
 @Component
 @RequestScope
-public class CppCodeExecutionService extends AbstractCodeExecutionService {
+public class PythonCodeExecutionService extends AbstractCodeExecutionService {
 
-    String[] compileAndRunCmd = new String[]{"sh", "-c", "g++ <file_name>.cpp -o <file_name>.out && ./<file_name>.out < input.txt"};
+    String[] compileAndRunCmd = new String[]{"sh", "-c", "python3 /<file_name>.py < input.txt"};
 
-    public CppCodeExecutionService() {
-        super("gcc:latest");
+    public PythonCodeExecutionService() {
+
+        super("python:3.14.0a5-alpine3.21");
     }
 
     @Override
     public CompileAndRunResult setup() throws InterruptedException {
 
-        super.setFileExtension("cpp");
+        super.setFileExtension("py");
         super.setCodeExecutionTimeout(5);
         super.setCompileAndRunCmd(compileAndRunCmd);
-        
+
         return super.execute();
     }
 }

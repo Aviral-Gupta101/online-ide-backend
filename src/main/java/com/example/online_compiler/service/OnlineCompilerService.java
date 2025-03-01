@@ -1,7 +1,8 @@
 package com.example.online_compiler.service;
 
 import com.example.online_compiler.DTO.RunCodeDto;
-import com.example.online_compiler.domain.codeExecution.CppCodeExecutionService;
+import com.example.online_compiler.domain.codeExecution.AbstractCodeExecutionService;
+import com.example.online_compiler.domain.factory.CodeExecutionFactory;
 import com.example.online_compiler.entity.CompileAndRunResult;
 import com.example.online_compiler.exception.customExceptions.UnableToRunCodeException;
 import lombok.extern.slf4j.Slf4j;
@@ -14,15 +15,16 @@ import org.springframework.stereotype.Service;
 public class OnlineCompilerService {
 
     @Autowired
-    CppCodeExecutionService cppCodeExecutionService;
+    CodeExecutionFactory codeExecutionFactory;
 
     public CompileAndRunResult runCode(RunCodeDto runCodeDto) {
 
+        AbstractCodeExecutionService codeExecutionService = codeExecutionFactory.getCodeExecutionServices(runCodeDto.getCompilerType());
         try {
-            cppCodeExecutionService.setInput(runCodeDto.getInput());
+            codeExecutionService.setInput(runCodeDto.getInput());
             String base64Code = Base64.encodeBase64String(runCodeDto.getCode().getBytes());
-            cppCodeExecutionService.setCode(base64Code);
-            return cppCodeExecutionService.execute();
+            codeExecutionService.setCode(base64Code);
+            return codeExecutionService.setup();
 
         } catch (Exception e) {
 
