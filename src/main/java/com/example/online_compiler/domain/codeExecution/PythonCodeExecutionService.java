@@ -8,10 +8,9 @@ import org.springframework.web.context.annotation.RequestScope;
 @RequestScope
 public class PythonCodeExecutionService extends AbstractCodeExecutionService {
 
-    String[] compileAndRunCmd = new String[]{"sh", "-c", "python3 /<file_name>.py < input.txt"};
+    private final String[] compileAndRunCmd = new String[]{"sh", "-c", "python3 /<file_name>.py < input.txt"};
 
     public PythonCodeExecutionService() {
-
         super("python:3.14.0a5-alpine3.21");
     }
 

@@ -1,6 +1,8 @@
 package com.example.online_compiler.domain.codeExecution;
 
 import com.example.online_compiler.entity.CompileAndRunResult;
+import com.example.online_compiler.exception.customExceptions.ContainerNotRunningException;
+import com.example.online_compiler.exception.customExceptions.UnableToRemoveContainerException;
 import com.github.dockerjava.api.DockerClient;
 import com.github.dockerjava.api.async.ResultCallback;
 import com.github.dockerjava.api.command.CreateContainerResponse;
@@ -22,7 +24,7 @@ import java.util.concurrent.TimeUnit;
 public abstract class AbstractCodeExecutionService {
 
     @Autowired
-    public DockerClient dockerClient;
+    private DockerClient dockerClient;
 
     private String containerId;
 
@@ -178,21 +180,25 @@ public abstract class AbstractCodeExecutionService {
     }
 
     private void removeContainer() {
+
+        // Make the container removal operation asynchronous
         CompletableFuture.runAsync(() -> {
             try {
                 dockerClient.stopContainerCmd(containerId).exec();
                 dockerClient.removeContainerCmd(containerId).exec();
                 Thread.sleep(500);
             } catch (InterruptedException e) {
-                System.out.println("ERROR: " + e.getMessage());
+
+                log.error("ERROR: Interrupted exception in removeContainer method {}", e.getMessage());
                 Thread.currentThread().interrupt(); // Restore interrupt flag
+                throw new UnableToRemoveContainerException("Error in removing container: " + e);
             }
         });
 
 
     }
 
-    protected CompileAndRunResult execute() throws InterruptedException {
+    protected CompileAndRunResult execute() {
 
         try {
 
@@ -201,7 +207,7 @@ public abstract class AbstractCodeExecutionService {
             boolean containerRunning = isContainerRunning(3, timeout);
 
             if (!containerRunning) {
-                throw new RuntimeException("ERROR: Container is not running");
+                throw new ContainerNotRunningException("ERROR: Container not in running state");
             }
 
             sendCodeToContainer();
@@ -209,7 +215,7 @@ public abstract class AbstractCodeExecutionService {
 
         } catch (Exception e) {
 
-            log.error("ERROR: Unable to execute runAllTask{}", e.getMessage());
+            log.error("ERROR: Unable to execute code {}", e.getMessage());
             throw new RuntimeException(e);
 
         } finally {

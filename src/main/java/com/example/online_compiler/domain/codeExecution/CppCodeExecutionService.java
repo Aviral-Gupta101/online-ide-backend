@@ -8,7 +8,7 @@ import org.springframework.web.context.annotation.RequestScope;
 @RequestScope
 public class CppCodeExecutionService extends AbstractCodeExecutionService {
 
-    String[] compileAndRunCmd = new String[]{"sh", "-c", "g++ <file_name>.cpp -o <file_name>.out && ./<file_name>.out < input.txt"};
+    private final String[] compileAndRunCmd = new String[]{"sh", "-c", "g++ <file_name>.cpp -o <file_name>.out && ./<file_name>.out < input.txt"};
 
     public CppCodeExecutionService() {
         super("gcc:latest");

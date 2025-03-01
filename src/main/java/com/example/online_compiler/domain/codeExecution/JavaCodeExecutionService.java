@@ -8,10 +8,9 @@ import org.springframework.web.context.annotation.RequestScope;
 @RequestScope
 public class JavaCodeExecutionService extends AbstractCodeExecutionService {
 
-    String[] compileAndRunCmd = new String[]{"sh", "-c", "java <file_name>.java < input.txt"};
+    private final String[] compileAndRunCmd = new String[]{"sh", "-c", "java <file_name>.java < input.txt"};
 
     public JavaCodeExecutionService() {
-
         super("openjdk:latest");
     }
 
