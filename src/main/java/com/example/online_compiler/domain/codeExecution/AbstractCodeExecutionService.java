@@ -10,6 +10,7 @@ import com.github.dockerjava.api.command.ExecCreateCmdResponse;
 import com.github.dockerjava.api.command.InspectContainerResponse;
 import com.github.dockerjava.api.model.Frame;
 import com.github.dockerjava.api.model.HostConfig;
+import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NonNull;
 import lombok.Setter;
@@ -37,23 +38,23 @@ public abstract class AbstractCodeExecutionService {
     @Setter
     private String input = "";
 
-    @Getter
+    @Getter(AccessLevel.PACKAGE)
     private String baseFileName; // Default to Main else change method generateBaseFileName()
 
-    @Setter
+    @Setter(AccessLevel.PACKAGE)
     private String fileExtension;
 
     @Getter
     private String[] compileAndRunCmd;
 
-    @Setter
+    @Setter(AccessLevel.PACKAGE)
     private int timeout = 10; // default to 5 seconds;
 
     @Getter
     @Setter
     private int codeExecutionTimeout = 10; // 15 seconds
 
-    @Setter
+    @Setter(AccessLevel.PACKAGE)
     private HostConfig hostConfig;
 
     public AbstractCodeExecutionService(@NonNull String containerImage) {
