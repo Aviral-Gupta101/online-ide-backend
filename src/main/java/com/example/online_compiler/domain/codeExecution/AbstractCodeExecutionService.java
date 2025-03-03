@@ -2,7 +2,6 @@ package com.example.online_compiler.domain.codeExecution;
 
 import com.example.online_compiler.entity.CompileAndRunResult;
 import com.example.online_compiler.exception.customExceptions.ContainerNotRunningException;
-import com.example.online_compiler.exception.customExceptions.UnableToRemoveContainerException;
 import com.github.dockerjava.api.DockerClient;
 import com.github.dockerjava.api.async.ResultCallback;
 import com.github.dockerjava.api.command.CreateContainerResponse;
@@ -20,6 +19,10 @@ import java.io.ByteArrayOutputStream;
 import java.util.Arrays;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.locks.Condition;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 @Slf4j
 public abstract class AbstractCodeExecutionService {
@@ -30,6 +33,11 @@ public abstract class AbstractCodeExecutionService {
     private String containerId;
 
     private final String containerImage;
+
+    private static final int MAX_INSTANCE_LIMIT = 5; // Max no containers at a time
+    private static final AtomicInteger maxInstanceCounter = new AtomicInteger(MAX_INSTANCE_LIMIT);
+    private static final Lock lock = new ReentrantLock();
+    private static final Condition lockCondition = lock.newCondition();
 
     @Setter
     @Getter
@@ -79,15 +87,29 @@ public abstract class AbstractCodeExecutionService {
         this.compileAndRunCmd = updatedCompileAndRunCmd;
     }
 
-    private void startContainer() {
+    private void startContainer() throws InterruptedException {
 
-        CreateContainerResponse createContainerResponse = dockerClient.createContainerCmd(containerImage)
-                .withHostConfig(hostConfig)
-                .withTty(true)
-                .exec();
+        lock.lock();
 
-        dockerClient.startContainerCmd(createContainerResponse.getId()).exec();
-        this.containerId = createContainerResponse.getId();
+        try {
+
+            while (maxInstanceCounter.get() == 0) {
+                lockCondition.await();
+            }
+
+            maxInstanceCounter.decrementAndGet();
+
+            CreateContainerResponse createContainerResponse = dockerClient.createContainerCmd(containerImage)
+                    .withHostConfig(hostConfig)
+                    .withTty(true)
+                    .exec();
+
+            dockerClient.startContainerCmd(createContainerResponse.getId()).exec();
+            this.containerId = createContainerResponse.getId();
+
+        } finally {
+            lock.unlock();
+        }
     }
 
     private void generateBaseFileName() {
@@ -184,19 +206,17 @@ public abstract class AbstractCodeExecutionService {
 
         // Make the container removal operation asynchronous
         CompletableFuture.runAsync(() -> {
+            dockerClient.stopContainerCmd(containerId).exec();
+            dockerClient.removeContainerCmd(containerId).exec();
+        }).thenRun(() -> {
+            lock.lock();
             try {
-                dockerClient.stopContainerCmd(containerId).exec();
-                dockerClient.removeContainerCmd(containerId).exec();
-                Thread.sleep(500);
-            } catch (InterruptedException e) {
-
-                log.error("ERROR: Interrupted exception in removeContainer method {}", e.getMessage());
-                Thread.currentThread().interrupt(); // Restore interrupt flag
-                throw new UnableToRemoveContainerException("Error in removing container: " + e);
+                maxInstanceCounter.incrementAndGet();
+                lockCondition.signal();
+            } finally {
+                lock.unlock();
             }
         });
-
-
     }
 
     protected CompileAndRunResult execute() {
