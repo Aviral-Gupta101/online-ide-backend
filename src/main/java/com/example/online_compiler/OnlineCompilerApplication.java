@@ -12,7 +12,6 @@ public class OnlineCompilerApplication {
         ConfigurableApplicationContext context = SpringApplication.run(OnlineCompilerApplication.class, args);
 
         Debug bean = context.getBean(Debug.class);
-
         bean.debug();
 
     }
