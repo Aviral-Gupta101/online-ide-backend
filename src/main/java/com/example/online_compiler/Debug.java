@@ -12,4 +12,8 @@ public class Debug {
     public void debug(){
         System.out.println("dockerDindHost: " + dockerDindHost);
     }
+
+    public String getDockerDindHost() {
+        return dockerDindHost;
+    }
 }
