@@ -1,22 +1,24 @@
 package com.example.online_compiler.domain.codeExecution;
 
 import com.example.online_compiler.entity.CompileAndRunResult;
+import com.example.online_compiler.exception.customExceptions.ContainerImageNotFoundException;
 import com.example.online_compiler.exception.customExceptions.ContainerNotRunningException;
 import com.github.dockerjava.api.DockerClient;
 import com.github.dockerjava.api.async.ResultCallback;
-import com.github.dockerjava.api.command.CreateContainerResponse;
-import com.github.dockerjava.api.command.ExecCreateCmdResponse;
-import com.github.dockerjava.api.command.InspectContainerResponse;
+import com.github.dockerjava.api.command.*;
 import com.github.dockerjava.api.model.Frame;
 import com.github.dockerjava.api.model.HostConfig;
+import com.github.dockerjava.api.model.Image;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NonNull;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+
 import java.io.ByteArrayOutputStream;
 import java.util.Arrays;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -74,6 +76,34 @@ public abstract class AbstractCodeExecutionService {
         this.hostConfig = new HostConfig();
 
         generateBaseFileName();
+    }
+
+    private boolean isImageExists() {
+
+        List<Image> images = dockerClient.listImagesCmd().exec();
+
+        return images.stream()
+                .flatMap(image -> Arrays.stream(image.getRepoTags() != null ? image.getRepoTags() : new String[0]))
+                .anyMatch(tag -> tag.startsWith(containerImage));
+
+    }
+
+    private void pullImage() throws InterruptedException {
+
+        if (isImageExists())
+            return;
+
+        String image = containerImage.split(":")[0];
+        String tag = containerImage.split(":")[1];
+
+        try {
+            dockerClient.pullImageCmd(image)
+                    .withTag(tag)
+                    .exec(new PullImageResultCallback())
+                    .awaitCompletion();
+        } catch (Exception e) {
+            System.err.println("Failed to pull image: " + e.getMessage());
+        }
     }
 
     public void setCompileAndRunCmd(String[] compileAndRunCmd) {
@@ -223,6 +253,19 @@ public abstract class AbstractCodeExecutionService {
 
         try {
 
+            if(!isImageExists()){
+
+                CompletableFuture.runAsync(() -> {
+                    try {
+                        pullImage();
+                    } catch (InterruptedException e) {
+                        throw new RuntimeException(e);
+                    }
+                });
+
+                throw new ContainerImageNotFoundException("Container image does not exits, please try again after sometime");
+            }
+
             startContainer();
 
             boolean containerRunning = isContainerRunning(3, timeout);
@@ -234,11 +277,13 @@ public abstract class AbstractCodeExecutionService {
             sendCodeToContainer();
             return compileAndRun();
 
-        } catch (Exception e) {
+        } catch (RuntimeException e) {
+            throw e;
+        }
+        catch (Exception e) {
 
             log.error("ERROR: Unable to execute code {}", e.getMessage());
             throw new RuntimeException(e);
-
         } finally {
             removeContainer();
         }
