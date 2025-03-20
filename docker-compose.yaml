@@ -1,0 +1,32 @@
+name: online-compiler
+
+services:
+
+  backend:
+    depends_on:
+      - dind
+    image: online-compiler:0.2
+    container_name: online-compiler-backend
+    build: .
+    environment:
+      - DIND_SERVICE=tcp://dind:2375
+    networks:
+      - online-compiler-network
+    ports:
+      - "8080:8080"
+
+  dind:
+    image: docker:dind
+    container_name: online-compiler-dind
+    privileged: true
+    ports:
+      - "2375"
+    command: dockerd --host tcp://0.0.0.0:2375
+    environment:
+      - DOCKER_HOST=tcp://localhost:2375
+    networks:
+      - online-compiler-network
+
+networks:
+  online-compiler-network:
+    driver: bridge

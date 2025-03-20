@@ -16,14 +16,14 @@ public class OnlineCompilerApplication {
         Debug bean = context.getBean(Debug.class);
         bean.debug();
 
-        try {
-            Thread.sleep(2000);
-            dockerClient.pingCmd().exec();
-            System.out.println("Connected: Docker DIND");
-        } catch (Exception e) {
-            System.err.println("Failed to connect to Docker DinD: " + e.getMessage());
-            System.exit(1); // Stop application
-        }
+//        try {
+//            Thread.sleep(5000);
+//            dockerClient.pingCmd().exec();
+//            System.out.println("Connected: Docker DIND");
+//        } catch (Exception e) {
+//            System.err.println("Failed to connect to Docker DinD: " + e.getMessage());
+//            System.exit(1); // Stop application
+//        }
     }
 }
 
