@@ -67,6 +67,10 @@ public abstract class AbstractCodeExecutionService {
     @Setter(AccessLevel.PACKAGE)
     private HostConfig hostConfig;
 
+    public static int getMaxInstanceLimit(){
+        return MAX_INSTANCE_LIMIT;
+    }
+
     public AbstractCodeExecutionService(@NonNull String containerImage) {
 
         if (containerImage.isBlank())
