@@ -78,7 +78,7 @@ public abstract class AbstractCodeExecutionService {
         generateBaseFileName();
     }
 
-    private boolean isImageExists() {
+    public boolean isImageExists() {
 
         List<Image> images = dockerClient.listImagesCmd().exec();
 
@@ -88,7 +88,7 @@ public abstract class AbstractCodeExecutionService {
 
     }
 
-    private void pullImage() throws InterruptedException {
+    public void pullImage() throws InterruptedException {
 
         if (isImageExists())
             return;

@@ -28,5 +28,4 @@ public class OnlineCompilerController {
         CompileAndRunResult compileAndRunResult = onlineCompilerService.runCode(runCodeDto);
         return ResponseEntity.ok(compileAndRunResult);
     }
-
 }
