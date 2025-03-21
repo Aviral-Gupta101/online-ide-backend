@@ -1,4 +1,4 @@
-name: online-compiler
+name: online-compiler-test
 
 services:
 
@@ -9,8 +9,12 @@ services:
     image: online-compiler:0.3
     container_name: online-compiler-backend
     build: .
+    entrypoint: ["./gradlew", "test"]
     environment:
       - DIND_SERVICE=tcp://dind:2375
+    # TO BE ONLY USED IN PIPELINE
+    volume:
+      ./test-reports:/app/build/reports/tests/test
     networks:
       - online-compiler-network
     ports:
@@ -32,6 +36,7 @@ services:
       interval: 10s
       timeout: 2s
       retries: 3
+    
 
 networks:
   online-compiler-network:
