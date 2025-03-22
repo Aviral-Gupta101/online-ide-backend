@@ -27,17 +27,8 @@ class OnlineCompilerApplicationTests {
     @Autowired
     private JavaCodeExecutionService javaCodeExecutionService;
 
-    @Autowired
-    StatusService statusService;
-
-    @Autowired
-    Debug debug;
-
     @BeforeEach
     public void init() throws Exception {
-
-        System.out.println("DIND HOST: " + debug.getDockerDindHost());
-        System.out.println("DIND CONNECTED: " + statusService.dindServiceStatus());
 
         if(!pythonCodeExecutionService.isImageExists())
             pythonCodeExecutionService.pullImage();

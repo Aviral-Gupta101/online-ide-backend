@@ -6,7 +6,7 @@ import org.springframework.stereotype.Component;
 @Component
 public class Debug {
 
-    @Value("${app.dind_service}")
+    @Value("${app.docker_host}")
     private String dockerDindHost;
 
     public void debug(){

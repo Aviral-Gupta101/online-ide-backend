@@ -1,3 +1,5 @@
+# ONLY TO USE FOR LOCAL TESTING
+
 name: online-compiler-test
 
 services:
@@ -11,10 +13,7 @@ services:
     build: .
     entrypoint: ["./gradlew", "test"]
     environment:
-      - DIND_SERVICE=tcp://dind:2375
-    # TO BE ONLY USED IN PIPELINE
-    # volumes:
-    #   ./test-reports:/app/build/reports/tests/test
+      - DOCKER_HOST=tcp://dind:2375
     networks:
       - online-compiler-network
     ports:

@@ -12,7 +12,7 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 public class DockerConfig {
 
-    @Value("${app.dind_service}")
+    @Value("${app.docker_host}")
     private String dockerDindHost;
 
     @Bean

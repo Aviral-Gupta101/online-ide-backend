@@ -10,7 +10,7 @@ services:
     container_name: online-compiler-backend
     build: .
     environment:
-      - DIND_SERVICE=tcp://dind:2375
+      - DOCKER_HOST=tcp://dind:2375
     networks:
       - online-compiler-network
     ports:
