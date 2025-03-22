@@ -26,6 +26,9 @@ public class DockerConfig {
                 "1".equals(System.getenv("DOCKER_TLS_VERIFY"));
         String certPath = System.getenv("DOCKER_CERT_PATH");
 
+        System.out.println("TLS: " + isTlsEnabled);
+        System.out.println("CERT PATH: " + certPath);
+
         DefaultDockerClientConfig.Builder configBuilder = DefaultDockerClientConfig.createDefaultConfigBuilder()
                 .withDockerHost(dockerDindHost);
 
