@@ -1,3 +1,5 @@
+# USE THIS FOR RUNNING APPLICATION
+
 name: online-compiler
 
 services:
@@ -9,6 +11,8 @@ services:
     image: online-compiler:0.3
     container_name: online-compiler-backend
     build: .
+    mem_limit: 1.25g
+    cpus: 0.5 
     environment:
       - DOCKER_HOST=tcp://dind:2375
     networks:
@@ -23,6 +27,8 @@ services:
     ports:
       - "2375"
     command: dockerd --host tcp://0.0.0.0:2375
+    mem_limit: 1.75g
+    cpus: 0.5
     environment:
       - DOCKER_HOST=tcp://localhost:2375
     networks:
