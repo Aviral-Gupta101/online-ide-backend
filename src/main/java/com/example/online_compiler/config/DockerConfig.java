@@ -43,7 +43,8 @@ public class DockerConfig {
 
         DockerHttpClient client = new ApacheDockerHttpClient.Builder()
                 .dockerHost(config.getDockerHost())
-                .build();
+                .sslConfig(config.getSSLConfig()) // Ensure SSL config is applied
+                .build();;
 
         return DockerClientImpl.getInstance(config, client);
     }
