@@ -13,8 +13,8 @@ services:
     environment:
       - DIND_SERVICE=tcp://dind:2375
     # TO BE ONLY USED IN PIPELINE
-    volumes:
-      ./test-reports:/app/build/reports/tests/test
+    # volumes:
+    #   ./test-reports:/app/build/reports/tests/test
     networks:
       - online-compiler-network
     ports:
