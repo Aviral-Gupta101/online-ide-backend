@@ -18,16 +18,30 @@ public class DockerConfig {
     @Bean
     public DockerClient dockerClient() {
 
-        if(dockerDindHost == null || dockerDindHost.isEmpty())
+        if (dockerDindHost == null || dockerDindHost.isEmpty()) {
             throw new RuntimeException("Docker host not set");
+        }
 
-        DefaultDockerClientConfig config = DefaultDockerClientConfig.createDefaultConfigBuilder()
-                .withDockerHost(dockerDindHost)
-                .build();
+        boolean isTlsEnabled = System.getenv("DOCKER_TLS_VERIFY") != null &&
+                "1".equals(System.getenv("DOCKER_TLS_VERIFY"));
+        String certPath = System.getenv("DOCKER_CERT_PATH");
+
+        DefaultDockerClientConfig.Builder configBuilder = DefaultDockerClientConfig.createDefaultConfigBuilder()
+                .withDockerHost(dockerDindHost);
+
+        if (isTlsEnabled && certPath != null && !certPath.isEmpty()) {
+            configBuilder.withDockerTlsVerify(true)
+                    .withDockerCertPath(certPath);
+        } else {
+            configBuilder.withDockerTlsVerify(false);
+        }
+
+        DefaultDockerClientConfig config = configBuilder.build();
 
         DockerHttpClient client = new ApacheDockerHttpClient.Builder()
                 .dockerHost(config.getDockerHost())
                 .build();
+
         return DockerClientImpl.getInstance(config, client);
     }
 }
