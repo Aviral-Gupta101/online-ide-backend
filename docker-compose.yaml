@@ -27,6 +27,8 @@ services:
     ports:
       - "2375"
     command: dockerd --host tcp://0.0.0.0:2375
+    volumes:
+      - my-dind-volume:/var/lib/docker
     mem_limit: 1.75g
     cpus: 0.5
     environment:
@@ -38,6 +40,9 @@ services:
       interval: 10s
       timeout: 2s
       retries: 3
+
+volumes:
+  my-dind-volume:
 
 networks:
   online-compiler-network:
