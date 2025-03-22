@@ -6,6 +6,7 @@ import com.example.online_compiler.domain.codeExecution.JavaCodeExecutionService
 import com.example.online_compiler.domain.codeExecution.PythonCodeExecutionService;
 import com.example.online_compiler.entity.CompileAndRunResult;
 import com.example.online_compiler.service.OnlineCompilerService;
+import com.example.online_compiler.service.StatusService;
 import com.example.online_compiler.util.CompilerTypeEnum;
 import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -26,8 +27,17 @@ class OnlineCompilerApplicationTests {
     @Autowired
     private JavaCodeExecutionService javaCodeExecutionService;
 
+    @Autowired
+    StatusService statusService;
+
+    @Autowired
+    Debug debug;
+
     @BeforeEach
     public void init() throws Exception {
+
+        System.out.println("DIND HOST: " + debug.getDockerDindHost());
+        System.out.println("DIND CONNECTED: " + statusService.dindServiceStatus());
 
         if(!pythonCodeExecutionService.isImageExists())
             pythonCodeExecutionService.pullImage();
