@@ -9,24 +9,54 @@ pipeline {
 
     stages {
 
-		stage("Checkout"){
-			steps{
-				checkout scmGit(branches: [[name: '*/master']], extensions: [], userRemoteConfigs: [[url: 'https://github.com/Aviral-Gupta101/online-ide-backend.git']])
-			}
-		}
+        stage('Initialize') {
+            steps {
+                script {
+                    githubNotify account: 'Aviral-Gupta101', credentialsId: 'github_creds', repo: 'online-ide-backend',  sha: env.GIT_COMMIT, context: 'Build', status: 'PENDING'
+                    githubNotify account: 'Aviral-Gupta101', credentialsId: 'github_creds', repo: 'online-ide-backend',  sha: env.GIT_COMMIT, context: 'Test', status: 'PENDING'
+                    githubNotify account: 'Aviral-Gupta101', credentialsId: 'github_creds', repo: 'online-ide-backend',  sha: env.GIT_COMMIT, context: 'Deploy', status: 'PENDING'
+                }
+            }
+        }
       
         stage('Build') {
 
             steps {
-              sh "./gradlew build -x test"
+
+                script {
+
+                    try {
+
+                        sh "./gradlew build -x test"
+
+                    } catch(Exception e){
+
+                        githubNotify account: 'Aviral-Gupta101', credentialsId: 'github_creds', repo: 'online-ide-backend',  sha: env.GIT_COMMIT, context: 'Build', status: 'FAILURE'
+                        throw e
+                    }
+                }
             }
+
         }
 
         stage('Test') {
 
-            steps{
-                sh './gradlew test'
+            steps {
+
+                script {
+
+                    try {
+
+                        sh './gradlew test'
+
+                    } catch(Exception e){
+
+                        githubNotify account: 'Aviral-Gupta101', credentialsId: 'github_creds', repo: 'online-ide-backend',  sha: env.GIT_COMMIT, context: 'Test', status: 'FAILURE'
+                        throw e
+                    }
+                }
             }
+
 
             post{
                 always{
@@ -52,24 +82,36 @@ pipeline {
             }
 
             steps {
-                sshagent(credentials: [SSH_KEY_CREDENTIALS]) {
-                    sh '''
-                        ssh -o StrictHostKeyChecking=no root@185.199.52.100 "
-                        
-                        if [[ ! -d /deployment/online-ide-backend ]]; then
-                            echo 'Directory not found. Cloning the repository...'
-                            git clone https://github.com/Aviral-Gupta101/online-ide-backend.git /deployment/online-ide-backend
-                        else
-                            echo 'Directory already exists. Skipping clone.'
-                        fi
+                script {
 
-                        cd /deployment/online-ide-backend
-                        chmod +x deploy.sh
-                        sh deploy.sh
-                        "
-                    '''
+                    try {
+
+                        sshagent(credentials: [SSH_KEY_CREDENTIALS]) {
+                            sh '''
+                                ssh -o StrictHostKeyChecking=no root@185.199.52.100 "
+                                
+                                if [[ ! -d /deployment/online-ide-backend ]]; then
+                                    echo 'Directory not found. Cloning the repository...'
+                                    git clone https://github.com/Aviral-Gupta101/online-ide-backend.git /deployment/online-ide-backend
+                                else
+                                    echo 'Directory already exists. Skipping clone.'
+                                fi
+
+                                cd /deployment/online-ide-backend
+                                chmod +x deploy.sh
+                                sh deploy.sh
+                                "
+                            '''
+                        }
+
+                    } catch(Exception e){
+
+                        githubNotify account: 'Aviral-Gupta101', credentialsId: 'github_creds', repo: 'online-ide-backend',  sha: env.GIT_COMMIT, context: 'Deploy', status: 'FAILURE'
+                        throw e
+                    }
                 }
             }
+
             
         }
     }
