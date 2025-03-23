@@ -8,16 +8,6 @@ pipeline {
     }
 
     stages {
-
-        stage('Initialize') {
-            steps {
-                script {
-                    githubNotify account: 'Aviral-Gupta101', credentialsId: 'github_creds', repo: 'online-ide-backend',  sha: env.GIT_COMMIT, context: 'Build', status: 'PENDING'
-                    githubNotify account: 'Aviral-Gupta101', credentialsId: 'github_creds', repo: 'online-ide-backend',  sha: env.GIT_COMMIT, context: 'Test', status: 'PENDING'
-                    githubNotify account: 'Aviral-Gupta101', credentialsId: 'github_creds', repo: 'online-ide-backend',  sha: env.GIT_COMMIT, context: 'Deploy', status: 'PENDING'
-                }
-            }
-        }
       
         stage('Build') {
 
@@ -27,7 +17,9 @@ pipeline {
 
                     try {
 
+                        githubNotify account: 'Aviral-Gupta101', credentialsId: 'github_creds', repo: 'online-ide-backend',  sha: env.GIT_COMMIT, context: 'Build', status: 'PENDING'
                         sh "./gradlew build -x test"
+                        githubNotify account: 'Aviral-Gupta101', credentialsId: 'github_creds', repo: 'online-ide-backend',  sha: env.GIT_COMMIT, context: 'Build', status: 'SUCCESS'
 
                     } catch(Exception e){
 
@@ -47,7 +39,9 @@ pipeline {
 
                     try {
 
+                        githubNotify account: 'Aviral-Gupta101', credentialsId: 'github_creds', repo: 'online-ide-backend',  sha: env.GIT_COMMIT, context: 'Test', status: 'PENDING'
                         sh './gradlew test'
+                        githubNotify account: 'Aviral-Gupta101', credentialsId: 'github_creds', repo: 'online-ide-backend',  sha: env.GIT_COMMIT, context: 'Test', status: 'SUCCESS'
 
                     } catch(Exception e){
 
@@ -85,7 +79,9 @@ pipeline {
                 script {
 
                     try {
-
+                        
+                        githubNotify account: 'Aviral-Gupta101', credentialsId: 'github_creds', repo: 'online-ide-backend',  sha: env.GIT_COMMIT, context: 'Deploy', status: 'PENDING'
+                        
                         sshagent(credentials: [SSH_KEY_CREDENTIALS]) {
                             sh '''
                                 ssh -o StrictHostKeyChecking=no root@185.199.52.100 "
@@ -101,8 +97,10 @@ pipeline {
                                 chmod +x deploy.sh
                                 sh deploy.sh
                                 "
-                            '''
+                            '''    
                         }
+                        
+                        githubNotify account: 'Aviral-Gupta101', credentialsId: 'github_creds', repo: 'online-ide-backend',  sha: env.GIT_COMMIT, context: 'Deploy', status: 'SUCCESS'
 
                     } catch(Exception e){
 
