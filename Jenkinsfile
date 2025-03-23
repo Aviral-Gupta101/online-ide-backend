@@ -44,6 +44,34 @@ pipeline {
                 }
             }
         }
+
+        stage("Deploy"){
+
+            environment { 
+                SSH_KEY_CREDENTIALS = 'c11a8892-7246-4fc4-a737-e65ebe770f08'
+            }
+
+            steps {
+                sshagent(credentials: [SSH_KEY_CREDENTIALS]) {
+                    sh '''
+                        ssh -o StrictHostKeyChecking=no root@185.199.52.100 "
+                        
+                        if [[ ! -d /deployment/online-ide-backend ]]; then
+                            echo 'Directory not found. Cloning the repository...'
+                            git clone https://github.com/Aviral-Gupta101/online-ide-backend.git /deployment/online-ide-backend
+                        else
+                            echo 'Directory already exists. Skipping clone.'
+                        fi
+
+                        cd /deployment/online-ide-backend
+                        chmod +x deploy.sh
+                        sh deploy.sh
+                        "
+                    '''
+                }
+            }
+            
+        }
     }
 }
 
